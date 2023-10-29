@@ -1,8 +1,59 @@
 const { generateAuthToken } = require("../helper/auth/generateAuthToken");
 const { userModel } = require("../models/user");
-const { findPasswordByEmail, findUserByEmail } = require("../service/user");
+const {
+  findUserByEmail,
+  findUserByEmailAndUpdate,
+  createNewUser,
+} = require("../service/user");
+const { filterObj } = require("../utils/filterObj");
 
-const login = async (req, res, next) => {
+const register = async (req, res, next) => {
+  try {
+    const data = req.body;
+
+    // check if verified user with given email exists
+    const existingUser = await findUserByEmail(data.email);
+    if (existingUser && existingUser.verified) {
+      return res
+        .status(400)
+        .json({ status: "Error", message: "User already exists" });
+    } else if (existingUser) {
+      const requiredData = filterObj(
+        req.body,
+        "firstName",
+        "lastName",
+        "password"
+      );
+      const updatedUser = await findUserByEmailAndUpdate(
+        data.email,
+        requiredData
+      );
+      // generate OTP and send to the user email address
+      req.userId = updatedUser._id;
+      next();
+    } else {
+      // if user record is not found in database
+      const requiredData = filterObj(
+        req.body,
+        "firstName",
+        "lastName",
+        "password",
+        "email"
+      );
+      const newUser = await createNewUser(requiredData);
+
+      // generate OTP and send to the user email address
+      req.userId = newUser._id;
+      next();
+    }
+  } catch (error) {
+    return res
+      .status(500)
+      .json({ status: "Error", message: "Register failed!" });
+  }
+};
+
+const login = async (req, res) => {
   try {
     const { email, password } = req.body;
 
@@ -39,3 +90,23 @@ const login = async (req, res, next) => {
     return res.status(500).json({ status: "Error", message: "Login failed!" });
   }
 };
+
+const forgotPassword = async (req, res) => {
+  try {
+  } catch (error) {
+    return res
+      .status(500)
+      .json({ status: "Error", message: "Something went wrong" });
+  }
+};
+
+const resetPassword = async (req, res) => {
+  try {
+  } catch (error) {
+    return res
+      .status(500)
+      .json({ status: "Error", message: "Something went wrong" });
+  }
+};
+
+module.exports = { login, register, forgotPassword, resetPassword };

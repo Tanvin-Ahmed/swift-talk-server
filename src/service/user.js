@@ -1,11 +1,35 @@
 const { userModel } = require("../models/user");
 
+const createNewUser = async (data) => {
+  return await userModel.create(data);
+};
+
 const findUserByEmail = async (email) => {
   return await userModel.findOne({ email });
 };
 
-const findPasswordByEmail = async (email) => {
-  return await userModel.findOne({ email }).select("password");
+const findUserWithValidOTP = async (email) => {
+  return await userModel.findOne({ email, otpExpiryTime: { $gt: Date.now() } });
 };
 
-module.exports = { findUserByEmail, findPasswordByEmail };
+const findUserByEmailAndUpdate = async (email, data) => {
+  return await userModel.findOneAndUpdate({ email }, data, {
+    new: true,
+    validateModifiedOnly: true,
+  });
+};
+
+const findUserByIdAndUpdate = async (id, data) => {
+  return await userModel.findByIdAndUpdate(id, data, {
+    new: true,
+    validateModifiedOnly: true,
+  });
+};
+
+module.exports = {
+  findUserByEmail,
+  findUserByEmailAndUpdate,
+  createNewUser,
+  findUserByIdAndUpdate,
+  findUserWithValidOTP,
+};

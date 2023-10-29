@@ -1,5 +1,6 @@
 const mongoose = require("mongoose");
-const { comparePassword } = require("../helper/auth/comparePassword");
+const { compareHash } = require("../helper/auth/compareHash");
+const { generateHash } = require("../helper/auth/generateHash");
 
 const userSchema = new mongoose.Schema(
   {
@@ -39,6 +40,16 @@ const userSchema = new mongoose.Schema(
     passwordRestExpires: {
       type: Date,
     },
+    verified: {
+      type: Boolean,
+      default: false,
+    },
+    otp: {
+      type: Number,
+    },
+    otpExpiryTime: {
+      type: Date,
+    },
   },
   {
     versionKey: false,
@@ -46,8 +57,19 @@ const userSchema = new mongoose.Schema(
   }
 );
 
+userSchema.pre("save", async (next) => {
+  if (!this.isModified("otp")) return next();
+
+  this.otp = await generateHash(this.otp, 10);
+  next();
+});
+
 userSchema.methods.correctPassword = async (plainPassword, hashedPassword) => {
-  return await comparePassword(plainPassword, hashedPassword);
+  return await compareHash(plainPassword, hashedPassword);
+};
+
+userSchema.methods.correctOTP = async (plainOTP, hashedOTP) => {
+  return await compareHash(plainOTP, hashedOTP);
 };
 
 module.exports.userModel = mongoose.model("User", userSchema);
