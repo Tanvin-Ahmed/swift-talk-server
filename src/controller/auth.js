@@ -1,11 +1,14 @@
+const { envData } = require("../config/env-config");
 const { generateAuthToken } = require("../helper/auth/generateAuthToken");
 const { userModel } = require("../models/user");
 const {
   findUserByEmail,
   findUserByEmailAndUpdate,
   createNewUser,
+  findUserByPasswordResetToken,
 } = require("../service/user");
 const { filterObj } = require("../utils/filterObj");
+const crypto = require("crypto");
 
 const register = async (req, res, next) => {
   try {
@@ -73,6 +76,7 @@ const login = async (req, res) => {
     }
 
     const tokenData = {
+      id: user._id,
       firstName: user.firstName,
       lastName: user.lastName,
       email: user.email,
@@ -93,6 +97,33 @@ const login = async (req, res) => {
 
 const forgotPassword = async (req, res) => {
   try {
+    const { email } = req.body;
+    const user = await findUserByEmail(email);
+
+    if (!user) {
+      res.status(400).json({ status: "Error", message: "User does not exist" });
+    }
+
+    // generate random reset token
+    const resetToken = user.createPasswordResetToken();
+    const resetUrl = `${envData.client_url}/auth/reset-password?code=${resetToken}`;
+    try {
+      // TODO: send email with reset url
+    } catch (error) {
+      user.passwordResetToken = undefined;
+      user.passwordRestExpires = undefined;
+      await user.save({ validateBeforeSave: false });
+
+      return res.status(500).json({
+        status: "Error",
+        message:
+          "There was an error sending the email, please try again later.",
+      });
+    }
+
+    return res
+      .status(200)
+      .json({ status: "success", message: "Please check your email." });
   } catch (error) {
     return res
       .status(500)
@@ -102,6 +133,46 @@ const forgotPassword = async (req, res) => {
 
 const resetPassword = async (req, res) => {
   try {
+    // get user based on token
+    const hashedToken = crypto
+      .createHash("sha256")
+      .update(req.params.token)
+      .digest("hex");
+    const user = await findUserByPasswordResetToken(hashedToken);
+
+    // if token is expired or submission is out of time window
+    if (!user) {
+      return res
+        .status(400)
+        .json({ status: "Error", message: "Token is Invalid or Expired" });
+    }
+
+    // Update user password
+    user.password = req.body.password;
+    user.passwordConfirm = req.body.passwordConfirm;
+    user.passwordResetToken = undefined;
+    user.passwordRestExpires = undefined;
+    await user.save({ validateBeforeSave: false });
+
+    // login the user with new password and send jwt token
+
+    // TODO: send email to the user about password reset
+
+    const tokenData = {
+      id: user._id,
+      firstName: user.firstName,
+      lastName: user.lastName,
+      email: user.email,
+      password: user.password,
+      avatar: user.avatar,
+    };
+    const token = generateAuthToken(tokenData);
+
+    return res.status(200).json({
+      status: "success",
+      message: "Password reseated successfully",
+      token,
+    });
   } catch (error) {
     return res
       .status(500)

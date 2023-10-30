@@ -1,6 +1,7 @@
 const mongoose = require("mongoose");
 const { compareHash } = require("../helper/auth/compareHash");
 const { generateHash } = require("../helper/auth/generateHash");
+const crypto = require("crypto");
 
 const userSchema = new mongoose.Schema(
   {
@@ -31,6 +32,9 @@ const userSchema = new mongoose.Schema(
       type: String,
       required: [true, "Password is required"],
     },
+    passwordConfirm: {
+      type: String,
+    },
     passwordChangedAt: {
       type: Date,
     },
@@ -57,10 +61,17 @@ const userSchema = new mongoose.Schema(
   }
 );
 
-userSchema.pre("save", async (next) => {
+userSchema.pre("save", async function (next) {
   if (!this.isModified("otp")) return next();
 
   this.otp = await generateHash(this.otp, 10);
+  next();
+});
+
+userSchema.pre("save", async function (next) {
+  if (!this.isModified("password")) return next();
+
+  this.password = await generateHash(this.password, 10);
   next();
 });
 
@@ -70,6 +81,21 @@ userSchema.methods.correctPassword = async (plainPassword, hashedPassword) => {
 
 userSchema.methods.correctOTP = async (plainOTP, hashedOTP) => {
   return await compareHash(plainOTP, hashedOTP);
+};
+
+userSchema.methods.createPasswordResetToken = function () {
+  const resetToken = crypto.randomBytes(32).toString("hex");
+  this.passwordResetToken = crypto
+    .createHash("sha256")
+    .update(resetToken)
+    .digest("hex");
+
+  this.passwordRestExpires = Date.now() + 10 * 60 * 1000; // 10 minutes
+  return resetToken;
+};
+
+userSchema.methods.checkPasswordAfter = function (timestamp) {
+  return timestamp < this.passwordChangedAt;
 };
 
 module.exports.userModel = mongoose.model("User", userSchema);
