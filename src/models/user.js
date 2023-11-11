@@ -49,7 +49,7 @@ const userSchema = new mongoose.Schema(
       default: false,
     },
     otp: {
-      type: Number,
+      type: String,
     },
     otpExpiryTime: {
       type: Date,
@@ -62,8 +62,10 @@ const userSchema = new mongoose.Schema(
 );
 
 userSchema.pre("save", async function (next) {
-  if (!this.isModified("otp")) return next();
+  // Only run this function if otp was actually modified
+  if (!this.isModified("otp") || !this.otp) return next();
 
+  // Hash the otp with cost of 10
   this.otp = await generateHash(this.otp, 10);
   next();
 });

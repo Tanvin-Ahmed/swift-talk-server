@@ -1,12 +1,11 @@
 const { envData } = require("../config/env-config");
 const { generateAuthToken } = require("../helper/auth/generateAuthToken");
-const { userModel } = require("../models/user");
 const {
   findUserByEmail,
   findUserByEmailAndUpdate,
   createNewUser,
   findUserByPasswordResetToken,
-} = require("../service/user");
+} = require("../service/auth");
 const { filterObj } = require("../utils/filterObj");
 const crypto = require("crypto");
 
@@ -69,7 +68,7 @@ const login = async (req, res) => {
 
     const user = await findUserByEmail(email);
 
-    if (!user || !(await userModel.correctPassword(password, user.password))) {
+    if (!user || !(await user.correctPassword(password, user.password))) {
       return res
         .status(400)
         .json({ status: "Error", message: "Email or Password is incorrect!" });
@@ -80,7 +79,6 @@ const login = async (req, res) => {
       firstName: user.firstName,
       lastName: user.lastName,
       email: user.email,
-      password: user.password,
       avatar: user.avatar,
     };
     const token = generateAuthToken(tokenData);
@@ -91,6 +89,7 @@ const login = async (req, res) => {
       token,
     });
   } catch (error) {
+    console.log(error);
     return res.status(500).json({ status: "Error", message: "Login failed!" });
   }
 };
@@ -106,8 +105,11 @@ const forgotPassword = async (req, res) => {
 
     // generate random reset token
     const resetToken = user.createPasswordResetToken();
-    const resetUrl = `${envData.client_url}/auth/reset-password?code=${resetToken}`;
+    await user.save({ validateBeforeSave: false });
+
     try {
+      const resetUrl = `${envData.client_url}/auth/reset-password?code=${resetToken}`;
+      console.log(resetUrl);
       // TODO: send email with reset url
     } catch (error) {
       user.passwordResetToken = undefined;
@@ -136,7 +138,7 @@ const resetPassword = async (req, res) => {
     // get user based on token
     const hashedToken = crypto
       .createHash("sha256")
-      .update(req.params.token)
+      .update(req.body.token)
       .digest("hex");
     const user = await findUserByPasswordResetToken(hashedToken);
 
@@ -163,7 +165,6 @@ const resetPassword = async (req, res) => {
       firstName: user.firstName,
       lastName: user.lastName,
       email: user.email,
-      password: user.password,
       avatar: user.avatar,
     };
     const token = generateAuthToken(tokenData);

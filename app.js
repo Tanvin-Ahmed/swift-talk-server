@@ -9,8 +9,7 @@ const helmet = require("helmet");
 const mongoSanitizer = require("express-mongo-sanitize");
 const xss = require("xss-clean");
 require("./src/db/db");
-const indexRouter = require("./routes/index");
-const usersRouter = require("./routes/users");
+const indexRouter = require("./src/routes/index");
 
 const limiter = rateLimit({
   max: 3000,
@@ -36,7 +35,10 @@ app.use(helmet());
 app.use(mongoSanitizer());
 app.use(xss());
 
-app.use("/", limiter, indexRouter);
-app.use("/users", limiter, usersRouter);
+app.use("/v1", limiter, indexRouter);
+
+express.Router().get("/", function (req, res, next) {
+  res.render("index", { title: "Express" });
+});
 
 module.exports = app;

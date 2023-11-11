@@ -1,13 +1,15 @@
 const otpGenerator = require("otp-generator");
-const {
-  findUserByIdAndUpdate,
-  findUserWithValidOTP,
-  findUserById,
-} = require("../service/user");
 const { generateAuthToken } = require("../helper/auth/generateAuthToken");
 const { promisify } = require("util");
 const jwt = require("jsonwebtoken");
 const { envData } = require("../config/env-config");
+const sendEmail = require("../helper/mailer");
+const {
+  findUserByIdAndUpdate,
+  findUserWithValidOTP,
+  findUserById,
+} = require("../service/auth");
+const { getOtpEmailTemplate } = require("../template/otp");
 
 const protect = async (req, res, next) => {
   try {
@@ -59,9 +61,16 @@ const sendOTP = async (req, res) => {
     });
     const otpExpiryTime = Date.now() + 10 * 60 * 1000; // 10 minutes
 
-    await findUserByIdAndUpdate(userId, { otp, otpExpiryTime });
+    const user = await findUserByIdAndUpdate(userId, { otpExpiryTime });
+    user.otp = otp.toString();
+    await user.save({ new: true, validateModifiedOnly: true });
 
     // TODO: send email to the user
+    const emailContent = {
+      subject: "OTP for verify email (Swift Talk)",
+      body: getOtpEmailTemplate(req.body.firstName, otp),
+    };
+    await sendEmail(emailContent, req.body.email);
 
     res.status(200).json({
       status: "success",
@@ -76,7 +85,7 @@ const sendOTP = async (req, res) => {
   }
 };
 
-const verifyOTP = async (req, res, next) => {
+const verifyOTP = async (req, res) => {
   try {
     const { email, otp } = req.body;
 
@@ -86,6 +95,13 @@ const verifyOTP = async (req, res, next) => {
       return res
         .status(400)
         .json({ status: "Error", message: "Email is invalid or OTP expired" });
+    }
+
+    if (user.verified) {
+      return res.status(400).json({
+        status: "error",
+        message: "Email is already verified",
+      });
     }
 
     if (!(await user.correctOTP(otp, user.otp))) {
@@ -102,8 +118,8 @@ const verifyOTP = async (req, res, next) => {
       firstName: user.firstName,
       lastName: user.lastName,
       email: user.email,
-      password: user.password,
       avatar: user.avatar,
+      id: user._id,
     };
     const token = generateAuthToken(tokenData);
 
