@@ -1,11 +1,13 @@
 const { envData } = require("../config/env-config");
 const { generateAuthToken } = require("../helper/auth/generateAuthToken");
+const sendEmail = require("../helper/mailer");
 const {
   findUserByEmail,
   findUserByEmailAndUpdate,
   createNewUser,
   findUserByPasswordResetToken,
 } = require("../service/auth");
+const { getResetPasswordEmailTemplate } = require("../template/resetPassword");
 const { filterObj } = require("../utils/filterObj");
 const crypto = require("crypto");
 
@@ -85,7 +87,7 @@ const login = async (req, res) => {
 
     return res.status(200).json({
       status: "success",
-      message: "Logged in successfully",
+      message: `Welcome back ${user.firstName}!`,
       token,
     });
   } catch (error) {
@@ -108,9 +110,14 @@ const forgotPassword = async (req, res) => {
     await user.save({ validateBeforeSave: false });
 
     try {
-      const resetUrl = `${envData.client_url}/auth/reset-password?code=${resetToken}`;
-      console.log(resetUrl);
-      // TODO: send email with reset url
+      const resetUrl = `${envData.client_url}/auth/new-password?code=${resetToken}`;
+
+      // send email with reset url
+      const emailContent = {
+        subject: "Reset Password (Swift Talk)",
+        body: getResetPasswordEmailTemplate(user.firstName, resetUrl),
+      };
+      await sendEmail(emailContent, email);
     } catch (error) {
       user.passwordResetToken = undefined;
       user.passwordRestExpires = undefined;
