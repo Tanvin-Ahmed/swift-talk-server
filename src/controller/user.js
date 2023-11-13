@@ -1,4 +1,4 @@
-const { updateUserById } = require("../service/user");
+const { updateUserById, getFriendsByUserId } = require("../service/user");
 const { filterObj } = require("../utils/filterObj");
 
 const updateMe = async (req, res) => {
@@ -22,4 +22,20 @@ const updateMe = async (req, res) => {
   });
 };
 
-module.exports = { updateMe };
+const getUsers = async (req, res) => {
+  try {
+    const myFriends = await getFriendsByUserId(req.user._id);
+
+    return res.status(200).json({
+      status: "success",
+      data: myFriends,
+      message: "Get friends successfully",
+    });
+  } catch (error) {
+    return res
+      .status(500)
+      .json({ status: "Error", message: "Something went wrong" });
+  }
+};
+
+module.exports = { updateMe, getUsers };

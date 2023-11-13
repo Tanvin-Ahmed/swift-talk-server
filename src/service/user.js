@@ -1,3 +1,4 @@
+const { envData } = require("../config/env-config");
 const { userModel } = require("../models/user");
 
 const updateUserById = async (id, data) => {
@@ -7,4 +8,16 @@ const updateUserById = async (id, data) => {
   });
 };
 
-module.exports = { updateUserById };
+const findUserById = async (id) => {
+  return await userModel.findById(id);
+};
+
+const getFriendsByUserId = async (userId) => {
+  return await userModel.findById(userId).select("_id email friends").populate({
+    path: "friends",
+    model: envData.user_collection,
+    select: "firstName lastName _id email",
+  });
+};
+
+module.exports = { updateUserById, findUserById, getFriendsByUserId };

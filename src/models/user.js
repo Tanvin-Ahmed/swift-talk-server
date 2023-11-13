@@ -2,6 +2,7 @@ const mongoose = require("mongoose");
 const { compareHash } = require("../helper/auth/compareHash");
 const { generateHash } = require("../helper/auth/generateHash");
 const crypto = require("crypto");
+const { envData } = require("../config/env-config");
 
 const userSchema = new mongoose.Schema(
   {
@@ -54,6 +55,15 @@ const userSchema = new mongoose.Schema(
     otpExpiryTime: {
       type: Date,
     },
+    socket_id: {
+      type: String,
+    },
+    friends: [
+      {
+        type: mongoose.Schema.ObjectId,
+        ref: envData.user_collection,
+      },
+    ],
   },
   {
     versionKey: false,
@@ -100,4 +110,4 @@ userSchema.methods.checkPasswordAfter = function (timestamp) {
   return timestamp < this.passwordChangedAt;
 };
 
-module.exports.userModel = mongoose.model("User", userSchema);
+module.exports.userModel = mongoose.model(envData.user_collection, userSchema);
