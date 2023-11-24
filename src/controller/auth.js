@@ -6,10 +6,13 @@ const {
   findUserByEmailAndUpdate,
   createNewUser,
   findUserByPasswordResetToken,
+  findUserById,
 } = require("../service/auth");
 const { getResetPasswordEmailTemplate } = require("../template/resetPassword");
 const { filterObj } = require("../utils/filterObj");
 const crypto = require("crypto");
+const { promisify } = require("util");
+const jwt = require("jsonwebtoken");
 
 const register = async (req, res, next) => {
   try {
@@ -188,4 +191,58 @@ const resetPassword = async (req, res) => {
   }
 };
 
-module.exports = { login, register, forgotPassword, resetPassword };
+// refresh token
+const refreshToken = async (req, res) => {
+  try {
+    let token;
+    if (
+      req.headers.authorization &&
+      req.headers.authorization.startsWith("Bearer ")
+    ) {
+      token = req.headers.authorization.split(" ")[1];
+    } else if (req.cookies.jwt) {
+      token = req.cookies.jwt;
+    } else {
+      return res
+        .status(401)
+        .json({ status: "Error", message: "Unauthorized access" });
+    }
+
+    const decoded = await promisify(jwt.verify)(token, envData.jwt_secret);
+    const user = await findUserById(decoded.data.id);
+    if (!user) {
+      return res
+        .status(400)
+        .json({ status: "Error", message: "The user doesn't exist" });
+    }
+
+    // check if user changed password after token was issued
+    if (user.checkPasswordAfter(decoded.iat)) {
+      return res.status(400).json({
+        status: "Error",
+        message: "The user recently changed password. Please login again.",
+      });
+    }
+
+    const tokenData = {
+      id: user._id,
+      firstName: user.firstName,
+      lastName: user.lastName,
+      email: user.email,
+      avatar: user.avatar,
+    };
+    const newToken = generateAuthToken(tokenData);
+
+    return res.status(200).json(newToken);
+  } catch (error) {
+    return res.status(401).json({ status: "Error", message: "Invalid token!" });
+  }
+};
+
+module.exports = {
+  login,
+  register,
+  forgotPassword,
+  resetPassword,
+  refreshToken,
+};

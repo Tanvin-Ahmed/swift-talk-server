@@ -1,4 +1,5 @@
 const { envData } = require("../config/env-config");
+const { FriendRequestModel } = require("../models/friendRequest");
 const { userModel } = require("../models/user");
 
 const updateUserById = async (id, data) => {
@@ -20,4 +21,16 @@ const getFriendsByUserId = async (userId) => {
   });
 };
 
-module.exports = { updateUserById, findUserById, getFriendsByUserId };
+const getFriendRequestByRecipientId = async (recipientId) => {
+  return await FriendRequestModel.find({ recipient: recipientId }).populate(
+    "sender",
+    "_id firstName lastName"
+  );
+};
+
+module.exports = {
+  updateUserById,
+  findUserById,
+  getFriendsByUserId,
+  getFriendRequestByRecipientId,
+};

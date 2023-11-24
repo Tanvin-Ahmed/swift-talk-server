@@ -1,4 +1,8 @@
-const { updateUserById, getFriendsByUserId } = require("../service/user");
+const {
+  updateUserById,
+  getFriendsByUserId,
+  getFriendRequestByRecipientId,
+} = require("../service/user");
 const { filterObj } = require("../utils/filterObj");
 
 const updateMe = async (req, res) => {
@@ -38,4 +42,36 @@ const getUsers = async (req, res) => {
   }
 };
 
-module.exports = { updateMe, getUsers };
+const getFriends = async (req, res) => {
+  try {
+    const friends = await getFriendsByUserId(req.user._id);
+
+    return res.status(200).json({
+      status: "success",
+      data: friends,
+      message: "Friends found successfully",
+    });
+  } catch (error) {
+    return res
+      .status(500)
+      .json({ status: "Error", message: "Friends not found" });
+  }
+};
+
+const getFriendRequest = async (req, res) => {
+  try {
+    const friendRequest = await getFriendRequestByRecipientId(req.user._id);
+
+    return res.status(200).json({
+      success: "success",
+      data: friendRequest,
+      message: "Friend request found successfully",
+    });
+  } catch (error) {
+    return res
+      .status(500)
+      .json({ status: "Error", message: "No friend request found" });
+  }
+};
+
+module.exports = { updateMe, getUsers, getFriends, getFriendRequest };

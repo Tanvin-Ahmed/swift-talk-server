@@ -18,7 +18,7 @@ const schema = new mongoose.Schema(
   }
 );
 
-module.exports.FriendRequestModel = new mongoose.model(
+module.exports.FriendRequestModel = mongoose.model(
   envData.friend_request_collection,
   schema
 );
