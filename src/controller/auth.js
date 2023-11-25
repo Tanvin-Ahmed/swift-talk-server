@@ -80,7 +80,7 @@ const login = async (req, res) => {
     }
 
     const tokenData = {
-      id: user._id,
+      _id: user._id,
       firstName: user.firstName,
       lastName: user.lastName,
       email: user.email,
@@ -92,6 +92,7 @@ const login = async (req, res) => {
       status: "success",
       message: `Welcome back ${user.firstName}!`,
       token,
+      userId: user._id,
     });
   } catch (error) {
     console.log(error);
@@ -171,7 +172,7 @@ const resetPassword = async (req, res) => {
     // TODO: send email to the user about password reset
 
     const tokenData = {
-      id: user._id,
+      _id: user._id,
       firstName: user.firstName,
       lastName: user.lastName,
       email: user.email,
@@ -183,6 +184,7 @@ const resetPassword = async (req, res) => {
       status: "success",
       message: "Password reseated successfully",
       token,
+      userId: user._id,
     });
   } catch (error) {
     return res
@@ -225,7 +227,7 @@ const refreshToken = async (req, res) => {
     }
 
     const tokenData = {
-      id: user._id,
+      _id: user._id,
       firstName: user.firstName,
       lastName: user.lastName,
       email: user.email,
@@ -233,7 +235,7 @@ const refreshToken = async (req, res) => {
     };
     const newToken = generateAuthToken(tokenData);
 
-    return res.status(200).json(newToken);
+    return res.status(200).json({ token: newToken, userId: user._id });
   } catch (error) {
     return res.status(401).json({ status: "Error", message: "Invalid token!" });
   }

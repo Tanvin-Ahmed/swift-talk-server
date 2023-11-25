@@ -119,7 +119,7 @@ const verifyOTP = async (req, res) => {
       lastName: user.lastName,
       email: user.email,
       avatar: user.avatar,
-      id: user._id,
+      _id: user._id,
     };
     const token = generateAuthToken(tokenData);
 
@@ -127,6 +127,7 @@ const verifyOTP = async (req, res) => {
       status: "success",
       message: "OTP verified successfully",
       token,
+      userId: user._id,
     });
   } catch (error) {
     return res.status(500).json({

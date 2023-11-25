@@ -1,8 +1,5 @@
-const {
-  updateUserById,
-  getFriendsByUserId,
-  getFriendRequestByRecipientId,
-} = require("../service/user");
+const { getFriendRequestByRecipientId } = require("../service/friendRequest");
+const { updateUserById, getFriendsByUserId } = require("../service/user");
 const { filterObj } = require("../utils/filterObj");
 
 const updateMe = async (req, res) => {
@@ -44,11 +41,11 @@ const getUsers = async (req, res) => {
 
 const getFriends = async (req, res) => {
   try {
-    const friends = await getFriendsByUserId(req.user._id);
+    const user = await getFriendsByUserId(req.user._id);
 
     return res.status(200).json({
       status: "success",
-      data: friends,
+      data: user.friends,
       message: "Friends found successfully",
     });
   } catch (error) {

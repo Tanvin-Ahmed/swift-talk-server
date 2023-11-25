@@ -1,36 +1,37 @@
 const { envData } = require("../config/env-config");
-const { FriendRequestModel } = require("../models/friendRequest");
 const { userModel } = require("../models/user");
+const mongoose = require("mongoose");
 
 const updateUserById = async (id, data) => {
-  return await userModel.findByIdAndUpdate(id, data, {
+  const _id = new mongoose.Types.ObjectId(id);
+  return await userModel.findByIdAndUpdate(_id, data, {
     new: true,
     validateModifiedOnly: true,
   });
 };
 
-const findUserById = async (id) => {
-  return await userModel.findById(id);
+const findUserSocketIdByUserId = async (id) => {
+  const _id = new mongoose.Types.ObjectId(id);
+  return await userModel.findById(_id).select("socket_id");
 };
 
 const getFriendsByUserId = async (userId) => {
-  return await userModel.findById(userId).select("_id email friends").populate({
+  const _id = new mongoose.Types.ObjectId(userId);
+  return await userModel.findById(_id).select("_id email friends").populate({
     path: "friends",
     model: envData.user_collection,
     select: "firstName lastName _id email",
   });
 };
 
-const getFriendRequestByRecipientId = async (recipientId) => {
-  return await FriendRequestModel.find({ recipient: recipientId }).populate(
-    "sender",
-    "_id firstName lastName"
-  );
+const findUserById = async (userId) => {
+  const _id = new mongoose.Types.ObjectId(userId);
+  return await userModel.findById(_id);
 };
 
 module.exports = {
   updateUserById,
-  findUserById,
+  findUserSocketIdByUserId,
   getFriendsByUserId,
-  getFriendRequestByRecipientId,
+  findUserById,
 };
