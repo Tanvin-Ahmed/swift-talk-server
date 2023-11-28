@@ -28,7 +28,7 @@ const protect = async (req, res, next) => {
     }
 
     const decoded = await promisify(jwt.verify)(token, envData.jwt_secret);
-    const user = await findUserById(decoded.data.id);
+    const user = await findUserById(decoded.data._id);
     if (!user) {
       return res
         .status(400)
@@ -65,7 +65,7 @@ const sendOTP = async (req, res) => {
     user.otp = otp.toString();
     await user.save({ new: true, validateModifiedOnly: true });
 
-    // TODO: send email to the user
+    // send email to the user
     const emailContent = {
       subject: "OTP for verify email (Swift Talk)",
       body: getOtpEmailTemplate(req.body.firstName, otp),

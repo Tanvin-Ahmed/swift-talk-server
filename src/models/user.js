@@ -64,6 +64,10 @@ const userSchema = new mongoose.Schema(
         ref: envData.user_collection,
       },
     ],
+    status: {
+      type: String,
+      enum: ["Online", "Offline"],
+    },
   },
   {
     versionKey: false,
