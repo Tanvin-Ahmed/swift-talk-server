@@ -3,7 +3,12 @@ const {
   findRequestById,
   deleteRequestById,
 } = require("../service/friendRequest");
-const { userOneToOneConversation } = require("../service/oneToOneMessage");
+const {
+  userOneToOneConversation,
+  getExistingConversationByParticipantsId,
+  createNewConversation,
+  getMessagesByConversationId,
+} = require("../service/oneToOneMessage");
 const {
   updateUserById,
   findUserSocketIdByUserId,
@@ -99,12 +104,52 @@ const socketConnection = (io) => {
       callback(existingConversation);
     });
 
-    socket.on("text_message", (data) => {
-      // data = {to, from, text}
+    socket.on("start_conversation", async (data) => {
+      // data = {from, to}
+      const existingConversation =
+        await getExistingConversationByParticipantsId(data.from, data.to);
+
+      if (!existingConversation) {
+        const conversationInfo = { participants: [from, to] };
+        const createdConversation = await createNewConversation(
+          conversationInfo
+        );
+
+        const newConversation = await getConversationById(
+          createdConversation._id
+        );
+
+        socket.emit("start_chat", newConversation);
+      } else {
+        socket.emit("open_chat", existingConversation);
+      }
+    });
+
+    socket.on("get_direct_messages", async (data, callback) => {
+      const { messages } = await getMessagesByConversationId(
+        data.conversationId
+      );
+      callback(messages);
+    });
+
+    socket.on("text_message", async (data) => {
+      // data = {to, from, message, conversationId, type}
+      const { to, from, message, conversationId, type } = data;
+      const newChat = { to, from, type, text: message, createdAt: Date.now() };
+
+      // get users socket_id from DB
+      const sender = await findUserSocketIdByUserId(from);
+      const receiver = await findUserSocketIdByUserId(to);
+
       // create a new conversation if it already doesn't exist yet or add new message to the messages list
+      const chat = await getMessagesByConversationId(conversationId);
+      chat.messages.push(newChat);
       // save to DB
+      await chat.save();
       // emit event for receiver => incoming message
+      io.to(receiver.socket_id).emit("new_message", newChat);
       // emit event for sender => outgoing message
+      io.to(sender.socket_id).emit("new_message", newChat);
     });
 
     socket.on("file_message", (data) => {
